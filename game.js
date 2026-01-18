@@ -1,0 +1,240 @@
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+/* RESPONSIVO */
+function resizeCanvas() {
+    canvas.width = Math.min(400, window.innerWidth);
+    canvas.height = Math.min(600, window.innerHeight);
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+let WIDTH = canvas.width;
+let HEIGHT = canvas.height;
+
+/* FÍSICA */
+const GRAVITY = 0.3;
+const FLAP = -7;
+
+/* CANOS */
+let pipeSpeed = 2;
+const SPEED_INCREASE = 0.0005;
+const PIPE_GAP = 150;
+const PIPE_WIDTH = 52;
+
+/* ESTADOS */
+let state = "MENU"; // MENU | READY | PLAYING | GAME_OVER
+let score = 0;
+let backgroundType = "day";
+
+/* IMAGENS */
+const bgDay = new Image();
+bgDay.src = "assets/sprites/background-day.png";
+
+const bgNight = new Image();
+bgNight.src = "assets/sprites/background-night.png";
+
+const baseImg = new Image();
+baseImg.src = "assets/sprites/base.png";
+
+const pipeImg = new Image();
+pipeImg.src = "assets/sprites/pipe-red.png";
+
+const birdFrames = [
+    "assets/sprites/bluebird-upflap.png",
+    "assets/sprites/bluebird-midflap.png",
+    "assets/sprites/bluebird-downflap.png"
+].map(src => {
+    const img = new Image();
+    img.src = src;
+    return img;
+});
+
+/* CLASSES */
+class Bird {
+    constructor() {
+        this.x = 60;
+        this.y = HEIGHT / 2;
+        this.vel = 0;
+        this.frame = 0;
+        this.radius = 12;
+    }
+
+    flap() {
+        this.vel = FLAP;
+        audio.wing.currentTime = 0;
+        audio.wing.play();
+    }
+
+    update() {
+        if (state === "PLAYING") {
+            this.vel += GRAVITY;
+            this.y += this.vel;
+        }
+
+        this.frame = (this.frame + 1) % birdFrames.length;
+
+        if (
+            state === "PLAYING" &&
+            (this.y + this.radius >= HEIGHT - 100 || this.y - this.radius <= 0)
+        ) {
+            endGame();
+        }
+    }
+
+    draw() {
+        ctx.drawImage(
+            birdFrames[this.frame],
+            this.x - 12,
+            this.y - 12
+        );
+    }
+}
+
+class Pipe {
+    constructor(x) {
+        this.x = x;
+        this.top = Math.random() * 200 + 50;
+        this.bottom = this.top + PIPE_GAP;
+        this.passed = false;
+    }
+
+    update() {
+        this.x -= pipeSpeed;
+
+        if (!this.passed && this.x + PIPE_WIDTH < bird.x) {
+            this.passed = true;
+            score++;
+            audio.point.play();
+        }
+
+        if (this.collide()) endGame();
+    }
+
+    collide() {
+        return (
+            bird.x + bird.radius > this.x &&
+            bird.x - bird.radius < this.x + PIPE_WIDTH &&
+            (bird.y - bird.radius < this.top ||
+             bird.y + bird.radius > this.bottom)
+        );
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + PIPE_WIDTH / 2, this.top);
+        ctx.scale(1, -1);
+        ctx.drawImage(pipeImg, -PIPE_WIDTH / 2, 0, PIPE_WIDTH, 400);
+        ctx.restore();
+
+        ctx.drawImage(pipeImg, this.x, this.bottom, PIPE_WIDTH, 400);
+    }
+}
+
+/* VARIÁVEIS */
+let bird = new Bird();
+let pipes = [];
+
+/* FUNÇÕES */
+function startGame(bg) {
+    backgroundType = bg;
+    state = "READY";
+    score = 0;
+    pipeSpeed = 2.5;
+
+    bird = new Bird();
+    pipes = [new Pipe(WIDTH + 100), new Pipe(WIDTH + 300)];
+
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("gameOver").style.display = "none";
+
+    audio.menu.pause();
+    audio.swoosh.play();
+}
+
+function endGame() {
+    if (state !== "GAME_OVER") {
+        audio.hit.play();
+        setTimeout(() => audio.die.play(), 200);
+    }
+    state = "GAME_OVER";
+    document.getElementById("gameOver").style.display = "flex";
+}
+
+/* DESENHO */
+function draw() {
+    const bg = backgroundType === "day" ? bgDay : bgNight;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.drawImage(bg, 0, 0, WIDTH, HEIGHT);
+
+    if (state !== "MENU") {
+        bird.update();
+        bird.draw();
+    }
+
+    pipes.forEach(p => {
+        if (state === "PLAYING") p.update();
+        p.draw();
+    });
+
+    if (state === "PLAYING") {
+        pipeSpeed += SPEED_INCREASE;
+
+        if (pipes[0].x < -PIPE_WIDTH) {
+            pipes.shift();
+            pipes.push(new Pipe(WIDTH + 200));
+        }
+    }
+
+    if (state !== "MENU") {
+        ctx.fillStyle = "white";
+        ctx.font = "28px Arial";
+        ctx.fillText(score, WIDTH / 2 - 10, 40);
+    }
+
+    ctx.drawImage(baseImg, 0, HEIGHT - 100, WIDTH, 100);
+
+    if (state === "READY") {
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.fillText("Toque ou pressione ESPAÇO", WIDTH / 2 - 120, HEIGHT / 2 - 80);
+    }
+}
+
+/* LOOP */
+function loop() {
+    draw();
+    requestAnimationFrame(loop);
+}
+
+/* CONTROLES */
+function handleInput() {
+    if (state === "READY") {
+        state = "PLAYING";
+        bird.flap();
+    } else if (state === "PLAYING") {
+        bird.flap();
+    }
+}
+
+canvas.addEventListener("click", handleInput);
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") handleInput();
+});
+
+/* MENU */
+document.getElementById("playBtn").onclick = () => {
+    const bg = document.getElementById("bgSelect").value;
+    startGame(bg);
+};
+
+document.getElementById("restartBtn").onclick = () => {
+    document.getElementById("gameOver").style.display = "none";
+    document.getElementById("menu").style.display = "flex";
+    state = "MENU";
+    audio.menu.play();
+};
+
+/* START */
+audio.menu.play();
+loop();

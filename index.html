@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Flappy Pi</title>
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    height: 100%;
+}
+
+#gameWrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+}
+
+canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+#menu, #gameOver {
+    position: absolute;
+    inset: 0;
+    background: #76c7c0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+#gameOver {
+    display: none;
+}
+
+button, select {
+    padding: 12px 20px;
+    font-size: 18px;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="gameWrapper">
+
+    <div id="menu">
+        <h1>Flappy Pi</h1>
+
+        <select id="bgSelect">
+            <option value="day">Dia</option>
+            <option value="night">Noite</option>
+        </select>
+
+        <button id="playBtn">Jogar</button>
+    </div>
+
+    <div id="gameOver">
+        <h2>Game Over</h2>
+        <button id="restartBtn">Voltar ao Menu</button>
+    </div>
+
+    <canvas id="gameCanvas" width="288" height="512"></canvas>
+</div>
+
+<script src="audio.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>
