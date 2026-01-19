@@ -1,10 +1,12 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-/* RESPONSIVO */
+/* =========================
+   RESPONSIVIDADE REAL
+========================= */
 function resizeCanvas() {
-    canvas.width = Math.min(400, window.innerWidth);
-    canvas.height = Math.min(600, window.innerHeight);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
@@ -12,22 +14,30 @@ window.addEventListener("resize", resizeCanvas);
 let WIDTH = canvas.width;
 let HEIGHT = canvas.height;
 
-/* FÍSICA */
-const GRAVITY = 0.3;
-const FLAP = -7;
+/* =========================
+   FÍSICA
+========================= */
+const GRAVITY = 0.35;
+const FLAP = -7.5;
 
-/* CANOS */
-let pipeSpeed = 2;
+/* =========================
+   CANOS
+========================= */
+let pipeSpeed = 2.2;
 const SPEED_INCREASE = 0.0005;
 const PIPE_GAP = 150;
 const PIPE_WIDTH = 52;
 
-/* ESTADOS */
+/* =========================
+   ESTADOS
+========================= */
 let state = "MENU"; // MENU | READY | PLAYING | GAME_OVER
 let score = 0;
 let backgroundType = "day";
 
-/* IMAGENS */
+/* =========================
+   IMAGENS
+========================= */
 const bgDay = new Image();
 bgDay.src = "assets/sprites/background-day.png";
 
@@ -50,10 +60,12 @@ const birdFrames = [
     return img;
 });
 
-/* CLASSES */
+/* =========================
+   CLASSES
+========================= */
 class Bird {
     constructor() {
-        this.x = 60;
+        this.x = WIDTH * 0.25;
         this.y = HEIGHT / 2;
         this.vel = 0;
         this.frame = 0;
@@ -94,7 +106,7 @@ class Bird {
 class Pipe {
     constructor(x) {
         this.x = x;
-        this.top = Math.random() * 200 + 50;
+        this.top = Math.random() * (HEIGHT * 0.4) + 40;
         this.bottom = this.top + PIPE_GAP;
         this.passed = false;
     }
@@ -115,8 +127,10 @@ class Pipe {
         return (
             bird.x + bird.radius > this.x &&
             bird.x - bird.radius < this.x + PIPE_WIDTH &&
-            (bird.y - bird.radius < this.top ||
-             bird.y + bird.radius > this.bottom)
+            (
+                bird.y - bird.radius < this.top ||
+                bird.y + bird.radius > this.bottom
+            )
         );
     }
 
@@ -124,26 +138,33 @@ class Pipe {
         ctx.save();
         ctx.translate(this.x + PIPE_WIDTH / 2, this.top);
         ctx.scale(1, -1);
-        ctx.drawImage(pipeImg, -PIPE_WIDTH / 2, 0, PIPE_WIDTH, 400);
+        ctx.drawImage(pipeImg, -PIPE_WIDTH / 2, 0, PIPE_WIDTH, HEIGHT);
         ctx.restore();
 
-        ctx.drawImage(pipeImg, this.x, this.bottom, PIPE_WIDTH, 400);
+        ctx.drawImage(pipeImg, this.x, this.bottom, PIPE_WIDTH, HEIGHT);
     }
 }
 
-/* VARIÁVEIS */
+/* =========================
+   VARIÁVEIS
+========================= */
 let bird = new Bird();
 let pipes = [];
 
-/* FUNÇÕES */
+/* =========================
+   FUNÇÕES
+========================= */
 function startGame(bg) {
     backgroundType = bg;
     state = "READY";
     score = 0;
-    pipeSpeed = 2.5;
+    pipeSpeed = 2.2;
 
     bird = new Bird();
-    pipes = [new Pipe(WIDTH + 100), new Pipe(WIDTH + 300)];
+    pipes = [
+        new Pipe(WIDTH + 200),
+        new Pipe(WIDTH + 400)
+    ];
 
     document.getElementById("menu").style.display = "none";
     document.getElementById("gameOver").style.display = "none";
@@ -161,10 +182,14 @@ function endGame() {
     document.getElementById("gameOver").style.display = "flex";
 }
 
-/* DESENHO */
+/* =========================
+   DESENHO
+========================= */
 function draw() {
+    WIDTH = canvas.width;
+    HEIGHT = canvas.height;
+
     const bg = backgroundType === "day" ? bgDay : bgNight;
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
     ctx.drawImage(bg, 0, 0, WIDTH, HEIGHT);
 
     if (state !== "MENU") {
@@ -189,7 +214,7 @@ function draw() {
     if (state !== "MENU") {
         ctx.fillStyle = "white";
         ctx.font = "28px Arial";
-        ctx.fillText(score, WIDTH / 2 - 10, 40);
+        ctx.fillText(score, WIDTH / 2 - 10, 50);
     }
 
     ctx.drawImage(baseImg, 0, HEIGHT - 100, WIDTH, 100);
@@ -197,17 +222,25 @@ function draw() {
     if (state === "READY") {
         ctx.fillStyle = "white";
         ctx.font = "20px Arial";
-        ctx.fillText("Toque ou pressione ESPAÇO", WIDTH / 2 - 120, HEIGHT / 2 - 80);
+        ctx.fillText(
+            "Toque ou pressione ESPAÇO",
+            WIDTH / 2 - 130,
+            HEIGHT / 2 - 80
+        );
     }
 }
 
-/* LOOP */
+/* =========================
+   LOOP
+========================= */
 function loop() {
     draw();
     requestAnimationFrame(loop);
 }
 
-/* CONTROLES */
+/* =========================
+   INPUT SEM DELAY
+========================= */
 function handleInput() {
     if (state === "READY") {
         state = "PLAYING";
@@ -217,12 +250,18 @@ function handleInput() {
     }
 }
 
-canvas.addEventListener("click", handleInput);
+canvas.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    handleInput();
+});
+
 document.addEventListener("keydown", e => {
     if (e.code === "Space") handleInput();
 });
 
-/* MENU */
+/* =========================
+   MENU
+========================= */
 document.getElementById("playBtn").onclick = () => {
     const bg = document.getElementById("bgSelect").value;
     startGame(bg);
@@ -234,6 +273,19 @@ document.getElementById("restartBtn").onclick = () => {
     state = "MENU";
     audio.menu.play();
 };
+
+/* =========================
+   DESBLOQUEIO DE ÁUDIO
+========================= */
+function unlockAudio() {
+    for (let key in audio) {
+        audio[key].play().then(() => {
+            audio[key].pause();
+            audio[key].currentTime = 0;
+        }).catch(() => {});
+    }
+}
+canvas.addEventListener("pointerdown", unlockAudio, { once: true });
 
 /* START */
 audio.menu.play();
