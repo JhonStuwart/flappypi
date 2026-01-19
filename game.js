@@ -1,107 +1,292 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Flappy Pi</title>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-<meta name="viewport" content="
-  width=device-width,
-  height=device-height,
-  initial-scale=1.0,
-  maximum-scale=1.0,
-  user-scalable=no
-">
+/* =========================
+   RESPONSIVIDADE REAL
+========================= */
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
-<style>
-html, body {
-    margin: 0;
-    padding: 0;
-    background: black;
-    height: 100%;
-    overflow: hidden;
+let WIDTH = canvas.width;
+let HEIGHT = canvas.height;
+
+/* =========================
+   FÍSICA
+========================= */
+const GRAVITY = 0.35;
+const FLAP = -7.5;
+
+/* =========================
+   CANOS
+========================= */
+let pipeSpeed = 2.2;
+const SPEED_INCREASE = 0.0005;
+const PIPE_GAP = 150;
+const PIPE_WIDTH = 52;
+
+/* =========================
+   ESTADOS
+========================= */
+let state = "MENU"; // MENU | READY | PLAYING | GAME_OVER
+let score = 0;
+let backgroundType = "day";
+
+/* =========================
+   IMAGENS
+========================= */
+const bgDay = new Image();
+bgDay.src = "assets/sprites/background-day.png";
+
+const bgNight = new Image();
+bgNight.src = "assets/sprites/background-night.png";
+
+const baseImg = new Image();
+baseImg.src = "assets/sprites/base.png";
+
+const pipeImg = new Image();
+pipeImg.src = "assets/sprites/pipe-red.png";
+
+const birdFrames = [
+    "assets/sprites/bluebird-upflap.png",
+    "assets/sprites/bluebird-midflap.png",
+    "assets/sprites/bluebird-downflap.png"
+].map(src => {
+    const img = new Image();
+    img.src = src;
+    return img;
+});
+
+/* =========================
+   CLASSES
+========================= */
+class Bird {
+    constructor() {
+        this.x = WIDTH * 0.25;
+        this.y = HEIGHT / 2;
+        this.vel = 0;
+        this.frame = 0;
+        this.radius = 12;
+    }
+
+    flap() {
+        this.vel = FLAP;
+        audio.wing.currentTime = 0;
+        audio.wing.play();
+    }
+
+    update() {
+        if (state === "PLAYING") {
+            this.vel += GRAVITY;
+            this.y += this.vel;
+        }
+
+        this.frame = (this.frame + 1) % birdFrames.length;
+
+        if (
+            state === "PLAYING" &&
+            (this.y + this.radius >= HEIGHT - 100 || this.y - this.radius <= 0)
+        ) {
+            endGame();
+        }
+    }
+
+    draw() {
+        ctx.drawImage(
+            birdFrames[this.frame],
+            this.x - 12,
+            this.y - 12
+        );
+    }
 }
 
-#gameWrapper {
-    position: relative;
-    width: 100%;
-    height: 100%;
+class Pipe {
+    constructor(x) {
+        this.x = x;
+        this.top = Math.random() * (HEIGHT * 0.4) + 40;
+        this.bottom = this.top + PIPE_GAP;
+        this.passed = false;
+    }
+
+    update() {
+        this.x -= pipeSpeed;
+
+        if (!this.passed && this.x + PIPE_WIDTH < bird.x) {
+            this.passed = true;
+            score++;
+            audio.point.play();
+        }
+
+        if (this.collide()) endGame();
+    }
+
+    collide() {
+        return (
+            bird.x + bird.radius > this.x &&
+            bird.x - bird.radius < this.x + PIPE_WIDTH &&
+            (
+                bird.y - bird.radius < this.top ||
+                bird.y + bird.radius > this.bottom
+            )
+        );
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + PIPE_WIDTH / 2, this.top);
+        ctx.scale(1, -1);
+        ctx.drawImage(pipeImg, -PIPE_WIDTH / 2, 0, PIPE_WIDTH, HEIGHT);
+        ctx.restore();
+
+        ctx.drawImage(pipeImg, this.x, this.bottom, PIPE_WIDTH, HEIGHT);
+    }
 }
 
-canvas {
-    display: block;
+/* =========================
+   VARIÁVEIS
+========================= */
+let bird = new Bird();
+let pipes = [];
+
+/* =========================
+   FUNÇÕES
+========================= */
+function startGame(bg) {
+    backgroundType = bg;
+    state = "READY";
+    score = 0;
+    pipeSpeed = 2.2;
+
+    bird = new Bird();
+    pipes = [
+        new Pipe(WIDTH + 200),
+        new Pipe(WIDTH + 400)
+    ];
+
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("gameOver").style.display = "none";
+
+    audio.menu.pause();
+    audio.swoosh.play();
 }
 
-/* MENU */
-#menu {
-    position: absolute;
-    inset: 0;
-    background: #76c7c0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
+function endGame() {
+    if (state !== "GAME_OVER") {
+        audio.hit.play();
+        setTimeout(() => audio.die.play(), 200);
+    }
+    state = "GAME_OVER";
+    document.getElementById("gameOver").style.display = "flex";
 }
 
-#menu h1 {
-    margin-bottom: 10px;
+/* =========================
+   DESENHO
+========================= */
+function draw() {
+    WIDTH = canvas.width;
+    HEIGHT = canvas.height;
+
+    const bg = backgroundType === "day" ? bgDay : bgNight;
+    ctx.drawImage(bg, 0, 0, WIDTH, HEIGHT);
+
+    if (state !== "MENU") {
+        bird.update();
+        bird.draw();
+    }
+
+    pipes.forEach(p => {
+        if (state === "PLAYING") p.update();
+        p.draw();
+    });
+
+    if (state === "PLAYING") {
+        pipeSpeed += SPEED_INCREASE;
+
+        if (pipes[0].x < -PIPE_WIDTH) {
+            pipes.shift();
+            pipes.push(new Pipe(WIDTH + 200));
+        }
+    }
+
+    if (state !== "MENU") {
+        ctx.fillStyle = "white";
+        ctx.font = "28px Arial";
+        ctx.fillText(score, WIDTH / 2 - 10, 50);
+    }
+
+    ctx.drawImage(baseImg, 0, HEIGHT - 100, WIDTH, 100);
+
+    if (state === "READY") {
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.fillText(
+            "Toque ou pressione ESPAÇO",
+            WIDTH / 2 - 130,
+            HEIGHT / 2 - 80
+        );
+    }
 }
 
-#highScoreText {
-    font-size: 20px;
-    margin-bottom: 15px;
+/* =========================
+   LOOP
+========================= */
+function loop() {
+    draw();
+    requestAnimationFrame(loop);
 }
 
-button, select {
-    padding: 12px 20px;
-    font-size: 18px;
-    margin-top: 10px;
+/* =========================
+   INPUT SEM DELAY
+========================= */
+function handleInput() {
+    if (state === "READY") {
+        state = "PLAYING";
+        bird.flap();
+    } else if (state === "PLAYING") {
+        bird.flap();
+    }
 }
 
-/* GAME OVER (apenas botão, sem texto) */
-#gameOver {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 60px;
-    z-index: 10;
-    pointer-events: none;
+canvas.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    handleInput();
+});
+
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") handleInput();
+});
+
+/* =========================
+   MENU
+========================= */
+document.getElementById("playBtn").onclick = () => {
+    const bg = document.getElementById("bgSelect").value;
+    startGame(bg);
+};
+
+document.getElementById("restartBtn").onclick = () => {
+    document.getElementById("gameOver").style.display = "none";
+    document.getElementById("menu").style.display = "flex";
+    state = "MENU";
+    audio.menu.play();
+};
+
+/* =========================
+   DESBLOQUEIO DE ÁUDIO
+========================= */
+function unlockAudio() {
+    for (let key in audio) {
+        audio[key].play().then(() => {
+            audio[key].pause();
+            audio[key].currentTime = 0;
+        }).catch(() => {});
+    }
 }
+canvas.addEventListener("pointerdown", unlockAudio, { once: true });
 
-#restartBtn {
-    pointer-events: auto;
-}
-</style>
-</head>
-
-<body>
-
-<div id="gameWrapper">
-
-    <div id="menu">
-        <h1>Flappy Pi</h1>
-
-        <p id="highScoreText">High Score: 0</p>
-
-        <select id="bgSelect">
-            <option value="day">Dia</option>
-            <option value="night">Noite</option>
-        </select>
-
-        <button id="playBtn">Jogar</button>
-    </div>
-
-    <div id="gameOver">
-        <button id="restartBtn">Voltar ao Menu</button>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-</div>
-
-<script src="audio.js"></script>
-<script src="game.js"></script>
-
-</body>
-</html>
+/* START */
+audio.menu.play();
+loop();
