@@ -33,7 +33,6 @@ const PIPE_WIDTH = 52;
 ========================= */
 let state = "MENU"; // MENU | READY | PLAYING | GAME_OVER
 let score = 0;
-let highScore = localStorage.getItem("highScore") || 0;
 let backgroundType = "day";
 
 /* =========================
@@ -50,9 +49,6 @@ baseImg.src = "assets/sprites/base.png";
 
 const pipeImg = new Image();
 pipeImg.src = "assets/sprites/pipe-red.png";
-
-const gameOverImg = new Image();
-gameOverImg.src = "assets/sprites/gameover.png";
 
 const birdFrames = [
     "assets/sprites/bluebird-upflap.png",
@@ -182,12 +178,6 @@ function endGame() {
         audio.hit.play();
         setTimeout(() => audio.die.play(), 200);
     }
-
-    if (score > highScore) {
-        highScore = score;
-        localStorage.setItem("highScore", highScore);
-    }
-
     state = "GAME_OVER";
     document.getElementById("gameOver").style.display = "flex";
 }
@@ -238,29 +228,6 @@ function draw() {
             HEIGHT / 2 - 80
         );
     }
-
-    if (state === "GAME_OVER") {
-        const imgWidth = WIDTH * 0.6;
-        const imgHeight = imgWidth * 0.3;
-
-        ctx.drawImage(
-            gameOverImg,
-            (WIDTH - imgWidth) / 2,
-            HEIGHT * 0.25,
-            imgWidth,
-            imgHeight
-        );
-
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.font = "26px Arial";
-        ctx.fillText("Score: " + score, WIDTH / 2, HEIGHT * 0.55);
-        ctx.font = "22px Arial";
-        ctx.fillText("High Score: " + highScore, WIDTH / 2, HEIGHT * 0.62);
-        ctx.font = "18px Arial";
-        ctx.fillText("Toque ou ESPAÇO", WIDTH / 2, HEIGHT * 0.7);
-        ctx.textAlign = "left";
-    }
 }
 
 /* =========================
@@ -295,11 +262,6 @@ document.addEventListener("keydown", e => {
 /* =========================
    MENU
 ========================= */
-function updateHighScoreText() {
-    const el = document.getElementById("highScoreText");
-    if (el) el.textContent = "High Score: " + highScore;
-}
-
 document.getElementById("playBtn").onclick = () => {
     const bg = document.getElementById("bgSelect").value;
     startGame(bg);
@@ -309,7 +271,6 @@ document.getElementById("restartBtn").onclick = () => {
     document.getElementById("gameOver").style.display = "none";
     document.getElementById("menu").style.display = "flex";
     state = "MENU";
-    updateHighScoreText();
     audio.menu.play();
 };
 
@@ -327,6 +288,5 @@ function unlockAudio() {
 canvas.addEventListener("pointerdown", unlockAudio, { once: true });
 
 /* START */
-updateHighScoreText();
 audio.menu.play();
 loop();
