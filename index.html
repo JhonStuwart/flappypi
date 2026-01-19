@@ -4,38 +4,27 @@
 <meta charset="UTF-8">
 <title>Flappy Pi</title>
 
-<meta name="viewport" content="
-  width=device-width,
-  height=device-height,
-  initial-scale=1.0,
-  maximum-scale=1.0,
-  user-scalable=no
-">
-
 <style>
 html, body {
     margin: 0;
     padding: 0;
     background: black;
-    width: 100%;
     height: 100%;
     overflow: hidden;
-    touch-action: manipulation;
 }
 
 #gameWrapper {
     position: relative;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
 }
 
 canvas {
     display: block;
-    width: 100vw;
-    height: 100vh;
 }
 
-#menu, #gameOver {
+/* MENU */
+#menu {
     position: absolute;
     inset: 0;
     background: #76c7c0;
@@ -46,14 +35,35 @@ canvas {
     z-index: 10;
 }
 
-#gameOver {
-    display: none;
+#menu h1 {
+    margin-bottom: 10px;
+}
+
+#highScoreText {
+    font-size: 20px;
+    margin-bottom: 15px;
 }
 
 button, select {
     padding: 12px 20px;
     font-size: 18px;
     margin-top: 10px;
+}
+
+/* GAME OVER (apenas botão, sem texto) */
+#gameOver {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 60px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#restartBtn {
+    pointer-events: auto;
 }
 </style>
 </head>
@@ -65,6 +75,8 @@ button, select {
     <div id="menu">
         <h1>Flappy Pi</h1>
 
+        <p id="highScoreText">High Score: 0</p>
+
         <select id="bgSelect">
             <option value="day">Dia</option>
             <option value="night">Noite</option>
@@ -74,7 +86,6 @@ button, select {
     </div>
 
     <div id="gameOver">
-        <h2>Game Over</h2>
         <button id="restartBtn">Voltar ao Menu</button>
     </div>
 
